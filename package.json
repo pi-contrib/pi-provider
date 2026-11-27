@@ -1,6 +1,6 @@
 {
   "name": "@pi-contrib/pi-provider",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Missing decision models for Pi providers",
   "license": "MIT",
   "type": "module",
