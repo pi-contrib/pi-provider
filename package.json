@@ -1,0 +1,42 @@
+{
+  "name": "@pi-contrib/pi-provider",
+  "version": "0.1.0",
+  "description": "Missing decision models for Pi providers",
+  "license": "MIT",
+  "type": "module",
+  "repository": "https://github.com/pi-contrib/pi-provider.git",
+  "keywords": [
+    "pi-package",
+    "classifier",
+    "opencode-go"
+  ],
+  "files": [
+    "src/index.ts",
+    "src/providers/opencode-go.ts"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "lint": "biome check src biome.json package.json tsconfig.json",
+    "format": "biome check --write src biome.json package.json tsconfig.json",
+    "test": "node --experimental-strip-types --test src/*.test.mjs"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "^1.6.0",
+    "@earendil-works/pi-coding-agent": "^1.6.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.8",
+    "@earendil-works/pi-ai": "1.6.1",
+    "@earendil-works/pi-coding-agent": "1.6.1",
+    "@types/node": "^22",
+    "typescript": "^5.9.3"
+  }
+}
