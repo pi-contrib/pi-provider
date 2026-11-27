@@ -89,7 +89,7 @@ test("extension registers opencode-go-classifiers without altering opencode-go c
     OPENCODE_GO_CLASSIFIERS_PROVIDER_ID,
   );
   assert.equal(resolved?.auth.apiKey, "stored-go-key");
-  assert.equal(resolved?.source, "opencode-go credential");
+  assert.equal(resolved?.source, "stored by opencode-go");
 });
 
 test("extension inherits live runtime opencode-go keys and cleans up on session_shutdown", async (t) => {

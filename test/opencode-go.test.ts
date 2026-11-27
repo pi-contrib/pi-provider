@@ -86,6 +86,7 @@ function makeInteraction(
 
 test("registers only three text-only typesafe-system-one classifiers", () => {
   assert.equal(provider.id, OPENCODE_GO_CLASSIFIERS_PROVIDER_ID);
+  assert.equal(provider.name, "OpenCode Go Classifiers");
   assert.equal(provider.getModels().length, 0);
   assert.deepEqual(
     models.map((item) => [
@@ -146,11 +147,11 @@ test("auth prefers override key, then opencode-go credential, then OPENCODE_API_
   // 2. Stored opencode-go credential wins over OPENCODE_API_KEY.
   assert.deepEqual(await auth.resolve({ ctx, signal }), {
     auth: { apiKey: "go-one" },
-    source: "opencode-go credential",
+    source: "stored by opencode-go",
   });
   assert.deepEqual(await auth.check?.({ ctx, signal }), {
     type: "api_key",
-    source: "opencode-go credential",
+    source: "stored by opencode-go",
   });
 
   // Updates are observed live (no cache).
@@ -186,7 +187,7 @@ test("unbound check detects !command without executing it and unbound resolve do
 
   assert.deepEqual(await auth.check?.({ ctx, signal }), {
     type: "api_key",
-    source: "opencode-go credential",
+    source: "stored by opencode-go",
   });
   assert.equal(await auth.resolve({ ctx, signal }), undefined);
 });
@@ -216,12 +217,12 @@ test("bound ModelRegistry inherits apiKey and env from opencode-go without inher
 
   assert.deepEqual(await auth.check?.({ ctx, signal }), {
     type: "api_key",
-    source: "opencode-go credential",
+    source: "stored by opencode-go",
   });
   assert.deepEqual(await auth.resolve({ ctx, signal }), {
     auth: { apiKey: "registry-go-key" },
     env: { OPENCODE_REGION: "eu" },
-    source: "opencode-go credential",
+    source: "stored by opencode-go",
   });
 });
 

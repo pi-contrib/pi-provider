@@ -50,6 +50,9 @@ export interface OpenCodeGoProviderOptions {
   readGoCredential?: () => Credential | undefined;
 }
 
+const STORED_INHERITED_SOURCE = `stored by ${INHERITED_PROVIDER_ID}`;
+const INHERITED_SOURCE = `from ${INHERITED_PROVIDER_ID}`;
+
 function defaultReadGoCredential(): Credential | undefined {
   return readStoredCredential(INHERITED_PROVIDER_ID);
 }
@@ -63,7 +66,7 @@ function resolveFallbackStoredCredential(
   return {
     auth: { apiKey: key },
     ...(credential.env ? { env: credential.env } : {}),
-    source: `${INHERITED_PROVIDER_ID} credential`,
+    source: STORED_INHERITED_SOURCE,
   };
 }
 
@@ -74,7 +77,7 @@ function checkFallbackStoredCredential(
   if (!credential.key?.trim()) return undefined;
   return {
     type: "api_key",
-    source: `${INHERITED_PROVIDER_ID} credential`,
+    source: STORED_INHERITED_SOURCE,
   };
 }
 
@@ -86,7 +89,7 @@ export function createOpenCodeGoProvider(
 
   return createProvider({
     id: OPENCODE_GO_CLASSIFIERS_PROVIDER_ID,
-    name: "OpenCode Go classifiers",
+    name: "OpenCode Go Classifiers",
     baseUrl: BASE_URL,
     models: MODELS,
     auth: {
@@ -129,7 +132,9 @@ export function createOpenCodeGoProvider(
                 source:
                   status.source === "environment" && status.label
                     ? status.label
-                    : `${INHERITED_PROVIDER_ID} credential`,
+                    : status.source === "stored"
+                      ? STORED_INHERITED_SOURCE
+                      : INHERITED_SOURCE,
               };
             }
           } else {
@@ -164,7 +169,9 @@ export function createOpenCodeGoProvider(
                 source:
                   inherited?.source === ENV_VAR
                     ? ENV_VAR
-                    : `${INHERITED_PROVIDER_ID} credential`,
+                    : inherited?.source === "stored credential"
+                      ? STORED_INHERITED_SOURCE
+                      : INHERITED_SOURCE,
               };
             }
           } else {
