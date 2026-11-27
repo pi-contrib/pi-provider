@@ -10,9 +10,15 @@
     "classifier",
     "opencode-go"
   ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./providers/*": "./src/providers/*.ts"
+  },
   "files": [
-    "src/index.ts",
-    "src/providers/opencode-go.ts"
+    "src"
   ],
   "pi": {
     "extensions": [
@@ -24,16 +30,16 @@
   },
   "scripts": {
     "check": "tsc --noEmit",
-    "lint": "biome check src biome.json package.json tsconfig.json",
-    "format": "biome check --write src biome.json package.json tsconfig.json",
-    "test": "node --experimental-strip-types --test src/*.test.mjs"
+    "lint": "biome check src test biome.json package.json tsconfig.json",
+    "format": "biome check --write src test biome.json package.json tsconfig.json",
+    "test": "node --experimental-strip-types --test 'test/**/*.test.ts'"
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": "^1.6.0",
-    "@earendil-works/pi-coding-agent": "^1.6.0"
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.8",
+    "@biomejs/biome": "^2.6.9",
     "@earendil-works/pi-ai": "1.6.1",
     "@earendil-works/pi-coding-agent": "1.6.1",
     "@types/node": "^22",

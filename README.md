@@ -8,7 +8,7 @@
 
 ## What it adds
 
-Pi Provider currently registers three **text-only classifiers** under `opencode-go-classifiers`, using the OpenCode Go subscription's System One endpoint:
+Pi Provider currently registers three **text-only classifiers** under `opencode-go-classifiers`, using Pi's built-in `typesafe-system-one` adapter against the OpenCode Go subscription's System One endpoint:
 
 | ID | Context window |
 | --- | ---: |
@@ -41,11 +41,11 @@ For reproducible installs, pin a GitHub release tag or package version. Restart 
 
 The extension checks, in order:
 
-1. A separately stored key from `/login` → `opencode-go-classifiers` (use `/logout` for that provider to remove it).
-2. `OPENCODE_API_KEY` from the environment.
-3. The key stored for Pi's existing `opencode-go` provider (`/login` → `opencode-go`), resolved via `pi auth print-api-key --provider opencode-go`.
+1. A separately stored override key from `/login` → `opencode-go-classifiers` (use `/logout` for that provider to remove it).
+2. Credentials resolved for Pi's built-in `opencode-go` provider (`/login` → `opencode-go`, `models.json`, or runtime key), inherited in-process from Pi's session model registry (or `auth.json` before session start).
+3. `OPENCODE_API_KEY` from the environment.
 
-No credential is copied into the extension's package, and inherited keys are not cached. The `pi` executable must be on `PATH` to inherit a stored Go credential. If the provider is unavailable, sign into OpenCode Go or set the environment variable; `/login` for `opencode-go-classifiers` also accepts an explicit key. Treat installed extensions as trusted code because they can access credentials.
+No credential is copied into the extension's package, and inherited keys are not cached. If the provider is unavailable, sign into OpenCode Go (`/login opencode-go`) or set `OPENCODE_API_KEY`; `/login` for `opencode-go-classifiers` also accepts an explicit override key. Treat installed extensions as trusted code because they can access credentials.
 
 ### Use with codemode
 
@@ -68,7 +68,7 @@ const result = await models.classify(model, {
 return result.stopReason === "stop" ? result.answers : result.errorMessage;
 ```
 
-To see the registered catalog even without credentials, use `models.getModelsOfType("classifier", "opencode-go-classifiers")`. Input images are not supported. The extension translates Pi's boolean question type to System One's `noul` wire type. Errors are returned with `stopReason: "error"` or `"aborted"`, not thrown by the classifier.
+To see the registered catalog even without credentials, use `models.getModelsOfType("classifier", "opencode-go-classifiers")`. Input images are not supported. Errors are returned with `stopReason: "error"` or `"aborted"`, not thrown by the classifier.
 
 ## Development
 

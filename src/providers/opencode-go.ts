@@ -1,19 +1,23 @@
-import { execFileSync } from "node:child_process";
 import {
-  type ClassifierAnswer,
-  type ClassifierContext,
+  type AuthCheck,
+  type AuthResult,
   type ClassifierModel,
-  type ClassifierOptions,
-  type ClassifierResult,
+  type Credential,
   createProvider,
-} from "@earendil-works/pi-ai/compat";
+  type Provider,
+} from "@earendil-works/pi-ai";
+import { typesafeSystemOneApi } from "@earendil-works/pi-ai/api/typesafe-system-one.lazy";
+import {
+  type ModelRegistry,
+  readStoredCredential,
+} from "@earendil-works/pi-coding-agent";
 
-const PROVIDER = "opencode-go-classifiers";
+export const OPENCODE_GO_CLASSIFIERS_PROVIDER_ID = "opencode-go-classifiers";
+const INHERITED_PROVIDER_ID = "opencode-go";
+const ENV_VAR = "OPENCODE_API_KEY";
 const BASE_URL = "https://opencode.ai/inference/go/v1";
-const API = "system-one-go";
+const API = "typesafe-system-one" as const;
 const COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
-
-class ProviderError extends Error {}
 
 const MODELS = [
   { id: "jev-1.14", name: "Jev 1.14", contextWindow: 32000 },
@@ -23,203 +27,65 @@ const MODELS = [
     name: "GPT-6 Luna Decision",
     contextWindow: 1050000,
   },
-].map(({ id, name, contextWindow }) => ({
-  type: "classifier" as const,
-  provider: PROVIDER,
-  baseUrl: BASE_URL,
-  id,
-  name,
-  api: API,
-  input: ["text"] as ("text" | "image")[],
-  cost: COST,
-  contextWindow,
-}));
+].map(
+  ({ id, name, contextWindow }): ClassifierModel<typeof API> => ({
+    type: "classifier",
+    provider: OPENCODE_GO_CLASSIFIERS_PROVIDER_ID,
+    baseUrl: BASE_URL,
+    id,
+    name,
+    api: API,
+    input: ["text"],
+    cost: COST,
+    contextWindow,
+  }),
+) satisfies readonly ClassifierModel<typeof API>[];
 
-/** Read Pi's Go credential without copying it into another credential store. */
-export function goKey(): string | undefined {
-  try {
-    return (
-      execFileSync(
-        "pi",
-        ["auth", "print-api-key", "--provider", "opencode-go"],
-        {
-          encoding: "utf8",
-          timeout: 3000,
-          stdio: ["ignore", "pipe", "ignore"],
-        },
-      ).trim() || undefined
-    );
-  } catch {
-    return undefined;
-  }
+export interface OpenCodeGoProviderOptions {
+  /** Session model registry used to inherit live `opencode-go` auth. */
+  getModelRegistry?: () =>
+    | Pick<ModelRegistry, "getProviderAuth" | "getProviderAuthStatus">
+    | undefined;
+  /** Fallback reader for stored `opencode-go` credentials before a session binds. */
+  readGoCredential?: () => Credential | undefined;
 }
 
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function defaultReadGoCredential(): Credential | undefined {
+  return readStoredCredential(INHERITED_PROVIDER_ID);
 }
 
-function number(value: unknown, label: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new ProviderError(`System One returned invalid ${label}`);
-  }
-  return value;
-}
-
-function answer(
-  question: ClassifierContext["questions"][string],
-  value: unknown,
-  id: string,
-): ClassifierAnswer {
-  if (!record(value))
-    throw new ProviderError(`System One returned no answer for ${id}`);
-  if (question.type === "choice") {
-    if (
-      (value.type !== undefined && value.type !== "choice") ||
-      typeof value.choice !== "string"
-    ) {
-      throw new ProviderError(`System One returned invalid choice for ${id}`);
-    }
-    const probabilities = value.probabilities ?? {};
-    if (!record(probabilities))
-      throw new ProviderError(
-        `System One returned invalid probabilities for ${id}`,
-      );
-    return {
-      type: "choice",
-      choice: value.choice,
-      probabilities: Object.fromEntries(
-        Object.entries(probabilities).map(([key, probability]) => [
-          key,
-          number(probability, `probability for ${id}`),
-        ]),
-      ),
-      confidence: number(value.confidence ?? 0, `confidence for ${id}`),
-    };
-  }
-  if (question.type === "score") {
-    if (value.type !== undefined && value.type !== "score") {
-      throw new ProviderError(`System One returned invalid score for ${id}`);
-    }
-    return {
-      type: "score",
-      score: number(value.score, `score for ${id}`),
-      confidence: number(value.confidence ?? 0, `confidence for ${id}`),
-    };
-  }
-  if (
-    value.type !== undefined &&
-    value.type !== "noul" &&
-    value.type !== "bool"
-  ) {
-    throw new ProviderError(`System One returned invalid bool for ${id}`);
-  }
+function resolveFallbackStoredCredential(
+  credential: Credential | undefined,
+): AuthResult | undefined {
+  if (credential?.type !== "api_key") return undefined;
+  const key = credential.key?.trim();
+  if (!key || key.startsWith("!")) return undefined;
   return {
-    type: "bool",
-    probability: number(
-      value.noul ?? value.probability,
-      `probability for ${id}`,
-    ),
+    auth: { apiKey: key },
+    ...(credential.env ? { env: credential.env } : {}),
+    source: `${INHERITED_PROVIDER_ID} credential`,
   };
 }
 
-export async function classify(
-  model: ClassifierModel<typeof API>,
-  context: ClassifierContext,
-  options?: ClassifierOptions,
-): Promise<ClassifierResult> {
-  const result: ClassifierResult = {
-    api: model.api,
-    provider: model.provider,
-    model: model.id,
-    answers: {},
-    stopReason: "stop",
-    timestamp: Date.now(),
+function checkFallbackStoredCredential(
+  credential: Credential | undefined,
+): AuthCheck | undefined {
+  if (credential?.type !== "api_key") return undefined;
+  if (!credential.key?.trim()) return undefined;
+  return {
+    type: "api_key",
+    source: `${INHERITED_PROVIDER_ID} credential`,
   };
-  try {
-    if (options?.signal?.aborted)
-      throw new ProviderError("OpenCode Go classification aborted");
-    if (context.images?.length)
-      throw new ProviderError("OpenCode Go classifiers do not support images");
-    if (!options?.apiKey)
-      throw new ProviderError(
-        "No OpenCode Go key; use /login or set OPENCODE_API_KEY",
-      );
-    // System One's boolean question is called "noul" on the wire, but "bool" in Pi.
-    const questions = Object.fromEntries(
-      Object.entries(context.questions).map(([id, question]) => [
-        id,
-        question.type === "bool" ? { ...question, type: "noul" } : question,
-      ]),
-    );
-    const payload = { model: model.id, state: context.state, questions };
-    const body = (await options.onPayload?.(payload, model)) ?? payload;
-    const headers = new Headers();
-    for (const [name, value] of Object.entries({
-      ...model.headers,
-      ...options.headers,
-    })) {
-      if (value !== null && value !== undefined) headers.set(name, value);
-    }
-    headers.set("content-type", "application/json");
-    headers.set("authorization", `Bearer ${options.apiKey}`);
-    const response = await (options.fetch ?? fetch)(
-      `${model.baseUrl.replace(/\/+$/u, "")}/systemone`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-        signal: options.signal,
-      },
-    );
-    await options.onResponse?.(
-      {
-        status: response.status,
-        headers: Object.fromEntries(response.headers.entries()),
-      },
-      model,
-    );
-    if (!response.ok)
-      throw new ProviderError(`System One returned HTTP ${response.status}`);
-    const data: unknown = await response.json();
-    if (!record(data) || !record(data.answers))
-      throw new ProviderError("System One returned invalid answers");
-    const answers = data.answers;
-    if (record(data.usage)) {
-      const input = number(data.usage.input_tokens ?? 0, "input usage");
-      const output = number(data.usage.output_tokens ?? 0, "output usage");
-      result.usage = {
-        input,
-        output,
-        cacheRead: 0,
-        cacheWrite: 0,
-        totalTokens: input + output,
-        cost: { ...COST, total: 0 },
-      };
-    }
-    result.answers = Object.fromEntries(
-      Object.entries(context.questions).map(([id, question]) => [
-        id,
-        answer(question, answers[id], id),
-      ]),
-    );
-  } catch (error) {
-    result.stopReason = options?.signal?.aborted ? "aborted" : "error";
-    // Never reflect arbitrary network exception text: it may contain credentials or request data.
-    result.errorMessage =
-      result.stopReason === "aborted"
-        ? "OpenCode Go classification aborted"
-        : error instanceof ProviderError
-          ? error.message
-          : "OpenCode Go classification failed";
-  }
-  return result;
 }
 
 export function createOpenCodeGoProvider(
-  readGoKey: () => string | undefined = goKey,
-) {
+  options: OpenCodeGoProviderOptions = {},
+): Provider {
+  const { getModelRegistry, readGoCredential = defaultReadGoCredential } =
+    options;
+
   return createProvider({
-    id: PROVIDER,
+    id: OPENCODE_GO_CLASSIFIERS_PROVIDER_ID,
     name: "OpenCode Go classifiers",
     baseUrl: BASE_URL,
     models: MODELS,
@@ -227,34 +93,94 @@ export function createOpenCodeGoProvider(
       apiKey: {
         name: "OpenCode Go key",
         async login(interaction) {
-          return {
-            type: "api_key",
-            key: await interaction.prompt({
-              type: "secret",
-              message: "Enter OpenCode API key",
-            }),
-          };
+          interaction.signal.throwIfAborted();
+          interaction.notify({
+            type: "info",
+            message:
+              "Tip: /login opencode-go shares one API key with both OpenCode Go chat and classifiers. Enter a key below only to set a separate override key for classifiers.",
+          });
+          const raw = await interaction.prompt({
+            type: "secret",
+            message: "Enter OpenCode API key",
+          });
+          interaction.signal.throwIfAborted();
+          const key = raw.trim();
+          if (!key) {
+            throw new Error("OpenCode API key must not be empty");
+          }
+          return { type: "api_key", key };
         },
-        async resolve({ credential, ctx }) {
-          const stored = credential?.key;
-          if (stored)
+        async check({ credential, ctx, signal }) {
+          signal.throwIfAborted();
+          if (credential?.key?.trim()) {
+            return {
+              type: "api_key",
+              source: `${OPENCODE_GO_CLASSIFIERS_PROVIDER_ID} credential`,
+            };
+          }
+          const registry = getModelRegistry?.();
+          if (registry) {
+            const status = registry.getProviderAuthStatus(
+              INHERITED_PROVIDER_ID,
+            );
+            if (status.configured) {
+              return {
+                type: "api_key",
+                source:
+                  status.source === "environment" && status.label
+                    ? status.label
+                    : `${INHERITED_PROVIDER_ID} credential`,
+              };
+            }
+          } else {
+            const fallback = checkFallbackStoredCredential(readGoCredential());
+            if (fallback) return fallback;
+          }
+          const environment = (await ctx.env(ENV_VAR))?.trim();
+          signal.throwIfAborted();
+          return environment ? { type: "api_key", source: ENV_VAR } : undefined;
+        },
+        async resolve({ credential, ctx, signal }) {
+          signal.throwIfAborted();
+          const stored = credential?.key?.trim();
+          if (stored) {
             return {
               auth: { apiKey: stored },
-              source: "opencode-go-classifiers credential",
+              ...(credential?.env ? { env: credential.env } : {}),
+              source: `${OPENCODE_GO_CLASSIFIERS_PROVIDER_ID} credential`,
             };
-          const environment = await ctx.env("OPENCODE_API_KEY");
-          if (environment)
-            return {
-              auth: { apiKey: environment },
-              source: "OPENCODE_API_KEY",
-            };
-          const inherited = readGoKey();
-          return inherited
-            ? { auth: { apiKey: inherited }, source: "opencode-go credential" }
+          }
+          const registry = getModelRegistry?.();
+          if (registry) {
+            const inherited = await registry.getProviderAuth(
+              INHERITED_PROVIDER_ID,
+            );
+            signal.throwIfAborted();
+            const apiKey = inherited?.auth.apiKey?.trim();
+            if (apiKey) {
+              return {
+                auth: { apiKey },
+                ...(inherited?.env ? { env: inherited.env } : {}),
+                source:
+                  inherited?.source === ENV_VAR
+                    ? ENV_VAR
+                    : `${INHERITED_PROVIDER_ID} credential`,
+              };
+            }
+          } else {
+            const fallback = resolveFallbackStoredCredential(
+              readGoCredential(),
+            );
+            if (fallback) return fallback;
+          }
+          const environment = (await ctx.env(ENV_VAR))?.trim();
+          signal.throwIfAborted();
+          return environment
+            ? { auth: { apiKey: environment }, source: ENV_VAR }
             : undefined;
         },
       },
     },
-    classifiers: { [API]: { classify } },
+    classifiers: { [API]: typesafeSystemOneApi() },
   });
 }
