@@ -95,7 +95,7 @@ test("extension registers opencode-go-classifiers without altering opencode-go c
 test("extension inherits live runtime opencode-go keys and cleans up on session_shutdown", async (t) => {
   const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
   const previousApiKey = process.env.OPENCODE_API_KEY;
-  process.env.PI_CODING_AGENT_DIR = "/nonexistent-pi-provider-test-agent-dir";
+  process.env.PI_CODING_AGENT_DIR = "/nonexistent-pi-classifier-test-agent-dir";
   delete process.env.OPENCODE_API_KEY;
   t.after(() => {
     if (previousAgentDir === undefined) {

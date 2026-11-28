@@ -1,10 +1,10 @@
 {
-  "name": "@pi-contrib/pi-provider",
+  "name": "@pi-contrib/pi-classifier",
   "version": "0.2.0",
-  "description": "Missing decision models for Pi providers",
+  "description": "Missing classifier and decision models for Pi providers",
   "license": "MIT",
   "type": "module",
-  "repository": "https://github.com/pi-contrib/pi-provider.git",
+  "repository": "https://github.com/pi-contrib/pi-classifier.git",
   "keywords": [
     "pi-package",
     "classifier",

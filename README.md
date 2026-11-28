@@ -1,14 +1,14 @@
-# Pi Provider
+# Pi Classifier
 
-> Decision models missing from Pi's built-in provider catalogs.
+> Classifier and decision models missing from Pi's built-in provider catalogs.
 
-[![CI](https://github.com/pi-contrib/pi-provider/actions/workflows/ci.yml/badge.svg)](https://github.com/pi-contrib/pi-provider/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/pi-contrib/pi-provider)](https://github.com/pi-contrib/pi-provider/releases/latest)
+[![CI](https://github.com/pi-contrib/pi-classifier/actions/workflows/ci.yml/badge.svg)](https://github.com/pi-contrib/pi-classifier/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/pi-contrib/pi-classifier)](https://github.com/pi-contrib/pi-classifier/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## What it adds
 
-Pi Provider currently registers three **text-only classifiers** under `opencode-go-classifiers`, using Pi's built-in `typesafe-system-one` adapter against the OpenCode Go subscription's System One endpoint:
+Pi Classifier currently registers three **text-only classifiers** under `opencode-go-classifiers`, using Pi's built-in `typesafe-system-one` adapter against the OpenCode Go subscription's System One endpoint:
 
 | ID | Context window |
 | --- | ---: |
@@ -16,7 +16,7 @@ Pi Provider currently registers three **text-only classifiers** under `opencode-
 | `gemini-decision-1` | 262,144 |
 | `gpt-6-luna-decision` | 1,050,000 |
 
-These decision models are used by codemode and other consumers of Pi's model registry. They are **not chat models**: they do not appear in `/model`, and this extension does not alter the built-in `opencode-go` provider or its chat models. Future missing-model integrations can live in separate modules; no other providers are included yet. The catalog reports zero cost because subscription pricing per model is not specified; **zero is an accounting placeholder, not a promise of free usage**. Availability and model access depend on your OpenCode Go subscription.
+These decision models are used by codemode and other consumers of Pi's model registry. They are **not chat models**: they do not appear in `/model`, and this extension does not alter the built-in `opencode-go` provider or its chat models. Future classifier-model integrations can live in separate modules; chat and image models are out of scope, and no other providers are included yet. The catalog reports zero cost because subscription pricing per model is not specified; **zero is an accounting placeholder, not a promise of free usage**. Availability and model access depend on your OpenCode Go subscription.
 
 ## Requirements and installation
 
@@ -26,13 +26,13 @@ These decision models are used by codemode and other consumers of Pi's model reg
 Install directly from GitHub (no npm registry login):
 
 ```sh
-pi install git:github.com/pi-contrib/pi-provider
+pi install git:github.com/pi-contrib/pi-classifier
 ```
 
 Or, after configuring npm authentication for `npm.pkg.github.com` and the `@pi-contrib` scope:
 
 ```sh
-pi install npm:@pi-contrib/pi-provider
+pi install npm:@pi-contrib/pi-classifier
 ```
 
 For reproducible installs, pin a GitHub release tag or package version. Restart Pi or run `/reload`.
