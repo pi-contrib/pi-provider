@@ -346,6 +346,25 @@ test("classify delegates to typesafe-system-one with identity headers, hooks, re
   assert.match(httpError.errorMessage ?? "", /403/);
   assert.match(httpError.errorMessage ?? "", /quota exceeded/);
 
+  // Transient responses are retried; onResponse runs for each attempt.
+  let attempts = 0;
+  const statuses: number[] = [];
+  const retried = await runtimeModels.classify(model, context, {
+    maxRetries: 1,
+    maxRetryDelayMs: 0,
+    onResponse: ({ status }) => {
+      statuses.push(status);
+    },
+    fetch: async () => {
+      attempts++;
+      return attempts === 1
+        ? jsonResponse({ error: "try later" }, 429)
+        : jsonResponse({ answers: wireAnswers });
+    },
+  });
+  assert.equal(retried.stopReason, "stop");
+  assert.deepEqual(statuses, [429, 200]);
+
   // Image input is rejected for text-only classifiers.
   const imageError = await runtimeModels.classify(model, {
     ...context,

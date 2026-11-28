@@ -6,11 +6,11 @@ import {
   createProvider,
   type Provider,
 } from "@earendil-works/pi-ai";
-import { typesafeSystemOneApi } from "@earendil-works/pi-ai/api/typesafe-system-one.lazy";
 import {
   type ModelRegistry,
   readStoredCredential,
 } from "@earendil-works/pi-coding-agent";
+import { systemOneClassifier } from "./system-one.ts";
 
 export const OPENCODE_GO_CLASSIFIERS_PROVIDER_ID = "opencode-go-classifiers";
 const INHERITED_PROVIDER_ID = "opencode-go";
@@ -188,6 +188,6 @@ export function createOpenCodeGoProvider(
         },
       },
     },
-    classifiers: { [API]: typesafeSystemOneApi() },
+    classifiers: { [API]: systemOneClassifier },
   });
 }

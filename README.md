@@ -8,7 +8,7 @@
 
 ## What it adds
 
-Pi Classifier currently registers three **text-only classifiers** under `opencode-go-classifiers`, using Pi's built-in `typesafe-system-one` adapter against the OpenCode Go subscription's System One endpoint:
+Pi Classifier currently registers three **text-only classifiers** under `opencode-go-classifiers`, using a bundled text-only `typesafe-system-one` adapter (Pi's bundled module resolver does not expose the built-in adapter's subpath to extensions) against the OpenCode Go subscription's System One endpoint:
 
 | ID | Context window |
 | --- | ---: |
