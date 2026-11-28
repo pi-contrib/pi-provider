@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/pi-contrib/pi-classifier/compare/v0.2.1...v0.2.2) (2026-11-28)
+
+
+### Bug Fixes
+
+* replace pi-ai subpath import with bundled System One adapter ([451933c](https://github.com/pi-contrib/pi-classifier/commit/451933c8a040331fbeeeed51a07dd727b93b9ca2))
+
 ## [0.2.1](https://github.com/pi-contrib/pi-classifier/compare/v0.2.0...v0.2.1) (2026-11-28)
 
 
